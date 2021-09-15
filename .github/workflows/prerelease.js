@@ -7,7 +7,7 @@ const child_process = require('child_process');
 function getTagVersionFromNpm(tag) {
   try {
     return child_process.execSync(`npm info ${package.name} version --tag="${tag}"`).toString('utf8').trim();
-  } catch (e) {
+  } catch (e: any) {
     return null;
   }
 }

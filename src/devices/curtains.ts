@@ -118,7 +118,7 @@ export class Curtain {
       .subscribe(async () => {
         try {
           await this.pushChanges();
-        } catch (e) {
+        } catch (e: any) {
           this.platform.log.error(JSON.stringify(e.message));
           this.platform.log.debug('Curtain %s -', accessory.displayName, JSON.stringify(e));
           this.apiError(e);
@@ -208,7 +208,7 @@ export class Curtain {
         this.parseStatus();
         this.updateHomeKitCharacteristics();
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(
         `Curtain - Failed to refresh status of ${this.device.deviceName}`,
         JSON.stringify(e.message),

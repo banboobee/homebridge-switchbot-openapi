@@ -195,7 +195,7 @@ export class Meter {
         this.parseStatus();
         this.updateHomeKitCharacteristics();
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(
         'Meter - Failed to update status of',
         this.device.deviceName,

@@ -154,7 +154,7 @@ export class Humidifier {
       .subscribe(async () => {
         try {
           await this.pushChanges();
-        } catch (e) {
+        } catch (e: any) {
           this.platform.log.error(JSON.stringify(e.message));
           this.platform.log.debug('Humidifier %s -', accessory.displayName, JSON.stringify(e));
           this.apiError(e);
@@ -267,7 +267,7 @@ export class Humidifier {
         this.parseStatus();
         this.updateHomeKitCharacteristics();
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(
         `Humidifier - Failed to update status of ${this.device.deviceName}`,
         JSON.stringify(e.message),
@@ -354,7 +354,7 @@ export class Humidifier {
         this.platform.log.debug('Humidifier %s Changes pushed -', this.accessory.displayName, pushAuto.data);
         this.statusCodeAuto(pushAuto);
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(JSON.stringify(e.message));
       this.platform.log.debug('Humidifier %s -', this.accessory.displayName, JSON.stringify(e));
       this.apiError(e);
@@ -395,7 +395,7 @@ export class Humidifier {
         this.platform.log.debug('Humidifier %s Changes pushed -', this.accessory.displayName, pushActive.data);
         this.statusCodeActive(pushActive);
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(JSON.stringify(e.message));
       this.platform.log.debug('Humidifier %s -', this.accessory.displayName, JSON.stringify(e));
       this.apiError(e);

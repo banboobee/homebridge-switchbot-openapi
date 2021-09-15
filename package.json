@@ -17,8 +17,9 @@
     "homebridge": ">=1.3.4"
   },
   "main": "dist/index.js",
-  "scripts": {
-    "update": "npm install && npm update",
+  "scripts": {    
+    "check": "npm install && npm outdated",
+    "update": "ncu -u && npm update && npm install",
     "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
@@ -42,20 +43,21 @@
     "ir"
   ],
   "dependencies": {
-    "axios": "^0.21.1",
-    "rxjs": "^7.2.0",
+    "axios": "^0.21.4",
+    "rxjs": "^7.3.0",
     "@homebridge/plugin-ui-utils": "0.0.19"
   },
   "devDependencies": {
-    "@types/node": "^16.4.5",
-    "@typescript-eslint/eslint-plugin": "^4.28.5",
-    "@typescript-eslint/parser": "^4.28.5",
-    "eslint": "^7.31.0",
+    "@types/node": "^16.9.1",
+    "@typescript-eslint/eslint-plugin": "^4.31.1",
+    "@typescript-eslint/parser": "^4.31.1",
+    "eslint": "^7.32.0",
     "homebridge": "^1.3.4",
     "nodemon": "^2.0.12",
     "rimraf": "^3.0.2",
-    "ts-node": "^10.1.0",
-    "typescript": "^4.3.5",
-    "typescript-axios-wb": "^1.0.3"
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.3",
+    "typescript-axios-wb": "^1.0.3",
+    "npm-check-updates": "^11.8.5"
   }
 }

@@ -92,7 +92,7 @@ export class Bot {
       .subscribe(async () => {
         try {
           await this.pushChanges();
-        } catch (e) {
+        } catch (e: any) {
           this.platform.log.error(JSON.stringify(e.message));
           this.platform.log.debug('Bot %s -', accessory.displayName, JSON.stringify(e));
           this.apiError(e);
@@ -138,7 +138,7 @@ export class Bot {
       this.deviceStatus = deviceStatus;
       this.parseStatus();
       this.updateHomeKitCharacteristics();
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(
         `Bot - Failed to update status of ${this.device.deviceName}`,
         JSON.stringify(e.message),

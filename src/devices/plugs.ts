@@ -83,7 +83,7 @@ export class Plug {
       .subscribe(async () => {
         try {
           await this.pushChanges();
-        } catch (e) {
+        } catch (e: any) {
           this.platform.log.error(JSON.stringify(e.message));
           this.platform.log.debug('Plug %s -', accessory.displayName, JSON.stringify(e));
           this.apiError(e);
@@ -123,7 +123,7 @@ export class Plug {
         this.parseStatus();
         this.updateHomeKitCharacteristics();
       }
-    } catch (e) {
+    } catch (e: any) {
       this.platform.log.error(
         `Plug - Failed to refresh status of ${this.device.deviceName}`,
         JSON.stringify(e.message),

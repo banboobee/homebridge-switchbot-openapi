@@ -125,7 +125,7 @@ export class WaterHeater {
       const push = await this.platform.axios.post(`${DeviceURL}/${this.device.deviceId}/commands`, payload);
       this.platform.log.debug('WaterHeater %s Changes pushed -', this.accessory.displayName, push.data);
       this.statusCode(push);
-    } catch (e) {
+    } catch (e: any) {
       this.apiError(e);
     }
   }

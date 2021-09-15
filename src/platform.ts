@@ -61,7 +61,7 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
     try {
       this.verifyConfig();
       this.log.debug('Config OK');
-    } catch (e) {
+    } catch (e: any) {
       this.log.error(JSON.stringify(e.message));
       this.log.debug(JSON.stringify(e));
       return;
@@ -85,7 +85,7 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
       // run the method to discover / register your devices as accessories
       try {
         this.discoverDevices();
-      } catch (e) {
+      } catch (e: any) {
         this.log.error('Failed to Discover Devices.', JSON.stringify(e.message));
         this.log.debug(JSON.stringify(e));
       }
@@ -362,7 +362,7 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
             );
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       this.log.error('Failed to Discover Devices.', JSON.stringify(e.message));
       this.log.debug(JSON.stringify(e));
     }
