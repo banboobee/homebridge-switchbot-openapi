@@ -24,6 +24,8 @@ import { WaterHeater } from './irdevices/waterheaters';
 import { VacuumCleaner } from './irdevices/vacuumcleaners';
 import { AirConditioner } from './irdevices/airconditioners';
 import { AirPurifier } from './irdevices/airpurifiers';
+import { MqttClient } from "mqtt";
+import { connectAsync } from "async-mqtt";
 
 /**
  * HomebridgePlatform
@@ -40,6 +42,8 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
   public axios: AxiosInstance = axios.create({
     responseType: 'json',
   });
+
+  public mqtt: MqttClient | null = null;
 
   debugMode!: boolean;
   version = require('../package.json').version; // eslint-disable-line @typescript-eslint/no-var-requires
@@ -201,6 +205,19 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
  * this method discovers the Locations
  */
   async discoverDevices() {
+    if (this.config.mqttURL) {
+      try {
+	this.mqtt = await connectAsync(this.config.mqttURL);
+	this.log.info(`MQTT connection has been established successfully.`)
+	this.mqtt.on('error', (e: Error) => {
+	  this.log.error(`Failed to publish MQTT messages. ${e}`)
+	});
+      } catch (e) {
+	this.mqtt = null;
+	this.log.error(`Failed to establish MQTT connection. ${e}`)
+      }
+    }
+    
     try {
       const devices = (await this.axios.get(DeviceURL)).data;
 
