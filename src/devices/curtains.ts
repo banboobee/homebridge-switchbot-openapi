@@ -73,6 +73,7 @@ export class Curtain {
         validValueRanges: [0, 100],
       })
       .onGet(() => {
+	this.mqttpublish('CurrentPosition', this.CurrentPosition);
         return this.CurrentPosition;
       });
 
@@ -125,6 +126,14 @@ export class Curtain {
         }
         this.curtainUpdateInProgress = false;
       });
+  }
+
+  mqttpublish(topic: string, message: any) {
+    const mac = this.device.deviceId?.toLowerCase().match(/[\s\S]{1,2}/g)?.join(':');
+    this.platform.mqtt?.publish(
+      `homebridge-switchbot-openapi/${mac}/${topic}`,
+      `${message}`
+    );
   }
 
   parseStatus() {
@@ -260,12 +269,15 @@ export class Curtain {
     this.setMinMax();
     if (this.CurrentPosition !== undefined) {
       this.service.updateCharacteristic(this.platform.Characteristic.CurrentPosition, this.CurrentPosition);
+      this.mqttpublish('CurrentPosition', this.CurrentPosition);
     }
     if (this.PositionState !== undefined) {
       this.service.updateCharacteristic(this.platform.Characteristic.PositionState, this.PositionState);
+      this.mqttpublish('PositionState', this.PositionState);
     }
     if (this.TargetPosition !== undefined) {
       this.service.updateCharacteristic(this.platform.Characteristic.TargetPosition, this.TargetPosition);
+      this.mqttpublish('TargetPosition', this.TargetPosition);
     }
   }
 
@@ -312,7 +324,8 @@ export class Curtain {
     this.platform.log.debug('Curtain %s - Set TargetPosition: %s', this.accessory.displayName, value);
 
     this.TargetPosition = value;
-
+    this.mqttpublish('TargetPosition', this.TargetPosition);
+    
     if (value > this.CurrentPosition) {
       this.PositionState = this.platform.Characteristic.PositionState.INCREASING;
       this.setNewTarget = true;
@@ -327,6 +340,7 @@ export class Curtain {
       this.setMinMax();
     }
     this.service.setCharacteristic(this.platform.Characteristic.PositionState, this.PositionState);
+    this.mqttpublish('PositionState', this.PositionState);
 
     /**
      * If Curtain movement time is short, the moving flag from backend is always false.
