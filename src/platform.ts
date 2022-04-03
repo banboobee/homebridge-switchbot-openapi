@@ -1,4 +1,4 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, Service, Characteristic } from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, Service, Characteristic, User } from 'homebridge';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import {
   PLATFORM_NAME,
@@ -35,6 +35,7 @@ import { connectAsync } from "async-mqtt";
 export class SwitchBotPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
+  public readonly User: typeof User = this.api.user;
 
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];

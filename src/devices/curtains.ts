@@ -4,19 +4,48 @@ import { interval, Subject } from 'rxjs';
 import { debounceTime, skipWhile, tap } from 'rxjs/operators';
 import { DeviceURL, device, deviceStatusResponse } from '../settings';
 import { AxiosResponse } from 'axios';
+import Persist from 'node-persist';
+import * as path from 'path';
+
+interface currentState {
+  CurrentPosition: CharacteristicValue;
+  PositionState: CharacteristicValue;
+  TargetPosition: CharacteristicValue;
+};
 
 export class Curtain {
   private service: Service;
 
-  CurrentPosition!: CharacteristicValue;
-  PositionState!: CharacteristicValue;
-  TargetPosition!: CharacteristicValue;
+  state!: currentState;
   deviceStatus!: deviceStatusResponse;
   setNewTarget!: boolean;
   setNewTargetTimer!: NodeJS.Timeout;
 
   curtainUpdateInProgress!: boolean;
   doCurtainUpdate;
+
+  async setupPersist(user: string): Promise<void> {
+    const log = this.platform.log;
+    const persist = Persist.create();
+    const device: string = this.device.deviceId?.toLowerCase()
+	  .match(/[\s\S]{1,2}/g)?.join(':') || '';
+    await persist.init(
+      {dir: path.join(user, 'plugin-persist', 'homebridge-switchbot-openapi'),
+       forgiveParseErrors: true
+      });
+    let state: currentState = await persist.getItem(device) || this.state;
+    this.platform.log.debug('setupPersist:', JSON.stringify(state));
+    this.state = new Proxy(state, {
+      set: function(target:any, key:PropertyKey, value:any, receiver:any):boolean {
+	try {
+	  persist.setItem(device, target)
+	} catch(e) {
+	  log.error(`${device} is unable to set state persist`, e);
+	}
+	return Reflect.set(target, key, value, receiver);
+      }.bind(this)
+    })
+  }
 
   constructor(
     private readonly platform: SwitchBotPlatform,
@@ -25,9 +54,12 @@ export class Curtain {
   ) {
     // default placeholders
     this.setMinMax();
-    this.CurrentPosition = 0;
-    this.TargetPosition = 0;
-    this.PositionState = this.platform.Characteristic.PositionState.STOPPED;
+    this.state = {
+      CurrentPosition: 0,
+      TargetPosition: 0,
+      PositionState: this.platform.Characteristic.PositionState.STOPPED
+    }
+    //this.setupPersist(this.platform.User.storagePath());
 
     // this is subject we use to track when we need to POST changes to the SwitchBot API
     this.doCurtainUpdate = new Subject();
@@ -35,7 +67,7 @@ export class Curtain {
     this.setNewTarget = false;
 
     // Retrieve initial values and updateHomekit
-    this.refreshStatus();
+    //this.refreshStatus();
 
     // set accessory information
     accessory
@@ -62,7 +94,7 @@ export class Curtain {
     // see https://developers.homebridge.io/#/service/WindowCovering
 
     // create handlers for required characteristics
-    this.service.setCharacteristic(this.platform.Characteristic.PositionState, this.PositionState);
+    this.service.setCharacteristic(this.platform.Characteristic.PositionState, this.state?.PositionState);
 
     this.service
       .getCharacteristic(this.platform.Characteristic.CurrentPosition)
@@ -73,8 +105,8 @@ export class Curtain {
         validValueRanges: [0, 100],
       })
       .onGet(() => {
-	this.mqttpublish('CurrentPosition', this.CurrentPosition);
-        return this.CurrentPosition;
+	this.mqttpublish('CurrentPosition', this.state?.CurrentPosition);
+        return this.state?.CurrentPosition;
       });
 
     this.service
@@ -86,7 +118,7 @@ export class Curtain {
       .onSet(this.TargetPositionSet.bind(this));
 
     // Update Homekit
-    this.updateHomeKitCharacteristics();
+    //this.updateHomeKitCharacteristics();
 
     // Start an update interval
     interval(this.platform.config.options!.refreshRate! * 1000)
@@ -99,10 +131,10 @@ export class Curtain {
     interval(this.platform.config.options!.curtain!.refreshRate! * 1000)
       .pipe(skipWhile(() => this.curtainUpdateInProgress))
       .subscribe(() => {
-        if (this.PositionState === this.platform.Characteristic.PositionState.STOPPED) {
+        if (this.state?.PositionState === this.platform.Characteristic.PositionState.STOPPED) {
           return;
         }
-        this.platform.log.debug('Refresh status when moving', this.PositionState);
+        this.platform.log.debug('Refresh status when moving', this.state?.PositionState);
         this.refreshStatus();
       });
 
@@ -126,9 +158,18 @@ export class Curtain {
         }
         this.curtainUpdateInProgress = false;
       });
+
+    this.initializeStatus();
+  }
+
+  async initializeStatus() {
+    await this.setupPersist(this.platform.User.storagePath());
+    await this.updateHomeKitCharacteristics();
+    await this.refreshStatus();
   }
 
   mqttpublish(topic: string, message: any) {
+    //console.trace();
     const mac = this.device.deviceId?.toLowerCase().match(/[\s\S]{1,2}/g)?.join(':');
     this.platform.mqtt?.publish(
       `homebridge-switchbot-openapi/${mac}/${topic}`,
@@ -139,13 +180,13 @@ export class Curtain {
   parseStatus() {
     // CurrentPosition
     this.setMinMax();
-    this.CurrentPosition = 100 - this.deviceStatus.body.slidePosition!;
+    this.state.CurrentPosition = 100 - this.deviceStatus.body.slidePosition!;
     this.setMinMax();
     this.platform.log.debug(
       'Curtain %s CurrentPosition -',
       this.accessory.displayName,
       'Device is Currently: ',
-      this.CurrentPosition,
+      this.state?.CurrentPosition,
     );
     if (this.setNewTarget) {
       this.platform.log.info(
@@ -155,48 +196,48 @@ export class Curtain {
     }
 
     if (this.deviceStatus.body.moving) {
-      if (this.TargetPosition > this.CurrentPosition) {
+      if (this.state?.TargetPosition > this.state?.CurrentPosition) {
         this.platform.log.debug(
           'Curtain %s -',
           this.accessory.displayName,
           'Current position:',
-          this.CurrentPosition,
+          this.state?.CurrentPosition,
           'closing',
         );
-        this.PositionState = this.platform.Characteristic.PositionState.INCREASING;
-      } else if (this.TargetPosition < this.CurrentPosition) {
+        this.state.PositionState = this.platform.Characteristic.PositionState.INCREASING;
+      } else if (this.state?.TargetPosition < this.state?.CurrentPosition) {
         this.platform.log.debug(
           'Curtain %s -',
           this.accessory.displayName,
           'Current position:',
-          this.CurrentPosition,
+          this.state?.CurrentPosition,
           'opening',
         );
-        this.PositionState = this.platform.Characteristic.PositionState.DECREASING;
+        this.state.PositionState = this.platform.Characteristic.PositionState.DECREASING;
       } else {
-        this.platform.log.debug('Curtain %s -', this.CurrentPosition, 'standby');
-        this.PositionState = this.platform.Characteristic.PositionState.STOPPED;
+        this.platform.log.debug('Curtain %s -', this.state?.CurrentPosition, 'standby');
+        this.state.PositionState = this.platform.Characteristic.PositionState.STOPPED;
       }
     } else {
       this.platform.log.debug(
         'Curtain %s -',
         this.accessory.displayName,
         'Current position:',
-        this.CurrentPosition,
+        this.state?.CurrentPosition,
         'standby',
       );
       if (!this.setNewTarget) {
         /*If Curtain calibration distance is short, there will be an error between the current percentage and the target percentage.*/
-        this.TargetPosition = this.CurrentPosition;
-        this.PositionState = this.platform.Characteristic.PositionState.STOPPED;
+        this.state.TargetPosition = this.state?.CurrentPosition;
+        this.state.PositionState = this.platform.Characteristic.PositionState.STOPPED;
       }
     }
     this.platform.log.debug(
       'Curtain %s CurrentPosition: %s, TargetPosition: %s, PositionState: %s',
       this.accessory.displayName,
-      this.CurrentPosition,
-      this.TargetPosition,
-      this.PositionState,
+      this.state?.CurrentPosition,
+      this.state?.TargetPosition,
+      this.state?.PositionState,
     );
   }
 
@@ -228,9 +269,9 @@ export class Curtain {
   }
 
   async pushChanges() {
-    if (this.TargetPosition !== this.CurrentPosition) {
-      this.platform.log.debug(`Pushing ${this.TargetPosition}`);
-      const adjustedTargetPosition = 100 - Number(this.TargetPosition);
+    if (this.state?.TargetPosition !== this.state?.CurrentPosition) {
+      this.platform.log.debug(`Pushing ${this.state?.TargetPosition}`);
+      const adjustedTargetPosition = 100 - Number(this.state?.TargetPosition);
       const payload = {
         commandType: 'command',
         command: 'setPosition',
@@ -261,23 +302,23 @@ export class Curtain {
       'Curtain %s updateHomeKitCharacteristics -',
       this.accessory.displayName,
       JSON.stringify({
-        CurrentPosition: this.CurrentPosition,
-        PositionState: this.PositionState,
-        TargetPosition: this.TargetPosition,
+        CurrentPosition: this.state?.CurrentPosition,
+        PositionState: this.state?.PositionState,
+        TargetPosition: this.state?.TargetPosition,
       }),
     );
     this.setMinMax();
-    if (this.CurrentPosition !== undefined) {
-      this.service.updateCharacteristic(this.platform.Characteristic.CurrentPosition, this.CurrentPosition);
-      this.mqttpublish('CurrentPosition', this.CurrentPosition);
+    if (this.state?.CurrentPosition !== undefined) {
+      this.service.updateCharacteristic(this.platform.Characteristic.CurrentPosition, this.state?.CurrentPosition);
+      this.mqttpublish('CurrentPosition', this.state?.CurrentPosition);
     }
-    if (this.PositionState !== undefined) {
-      this.service.updateCharacteristic(this.platform.Characteristic.PositionState, this.PositionState);
-      this.mqttpublish('PositionState', this.PositionState);
+    if (this.state?.PositionState !== undefined) {
+      this.service.updateCharacteristic(this.platform.Characteristic.PositionState, this.state?.PositionState);
+      this.mqttpublish('PositionState', this.state?.PositionState);
     }
-    if (this.TargetPosition !== undefined) {
-      this.service.updateCharacteristic(this.platform.Characteristic.TargetPosition, this.TargetPosition);
-      this.mqttpublish('TargetPosition', this.TargetPosition);
+    if (this.state?.TargetPosition !== undefined) {
+      this.service.updateCharacteristic(this.platform.Characteristic.TargetPosition, this.state?.TargetPosition);
+      this.mqttpublish('TargetPosition', this.state?.TargetPosition);
     }
   }
 
@@ -323,24 +364,24 @@ export class Curtain {
   TargetPositionSet(value: CharacteristicValue) {
     this.platform.log.debug('Curtain %s - Set TargetPosition: %s', this.accessory.displayName, value);
 
-    this.TargetPosition = value;
-    this.mqttpublish('TargetPosition', this.TargetPosition);
+    this.state.TargetPosition = value;
+    this.mqttpublish('TargetPosition', this.state?.TargetPosition);
     
-    if (value > this.CurrentPosition) {
-      this.PositionState = this.platform.Characteristic.PositionState.INCREASING;
+    if (value > this.state?.CurrentPosition) {
+      this.state.PositionState = this.platform.Characteristic.PositionState.INCREASING;
       this.setNewTarget = true;
       this.setMinMax();
-    } else if (value < this.CurrentPosition) {
-      this.PositionState = this.platform.Characteristic.PositionState.DECREASING;
+    } else if (value < this.state?.CurrentPosition) {
+      this.state.PositionState = this.platform.Characteristic.PositionState.DECREASING;
       this.setNewTarget = true;
       this.setMinMax();
     } else {
-      this.PositionState = this.platform.Characteristic.PositionState.STOPPED;
+      this.state.PositionState = this.platform.Characteristic.PositionState.STOPPED;
       this.setNewTarget = false;
       this.setMinMax();
     }
-    this.service.setCharacteristic(this.platform.Characteristic.PositionState, this.PositionState);
-    this.mqttpublish('PositionState', this.PositionState);
+    this.service.setCharacteristic(this.platform.Characteristic.PositionState, this.state?.PositionState);
+    this.mqttpublish('PositionState', this.state?.PositionState);
 
     /**
      * If Curtain movement time is short, the moving flag from backend is always false.
@@ -364,13 +405,13 @@ export class Curtain {
 
   public setMinMax() {
     if (this.platform.config.options?.curtain?.set_min) {
-      if (this.CurrentPosition <= this.platform.config.options?.curtain?.set_min) {
-        this.CurrentPosition = 0;
+      if (this.state?.CurrentPosition <= this.platform.config.options?.curtain?.set_min) {
+        this.state.CurrentPosition = 0;
       }
     }
     if (this.platform.config.options?.curtain?.set_max) {
-      if (this.CurrentPosition >= this.platform.config.options?.curtain?.set_max) {
-        this.CurrentPosition = 100;
+      if (this.state?.CurrentPosition >= this.platform.config.options?.curtain?.set_max) {
+        this.state.CurrentPosition = 100;
       }
     }
   }
