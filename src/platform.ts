@@ -26,6 +26,8 @@ import { AirConditioner } from './irdevices/airconditioners';
 import { AirPurifier } from './irdevices/airpurifiers';
 import { MqttClient } from "mqtt";
 import { connectAsync } from "async-mqtt";
+import fakegato from 'fakegato-history';
+import { EveHomeKitTypes } from 'homebridge-lib';
 
 /**
  * HomebridgePlatform
@@ -36,6 +38,8 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
   public readonly User: typeof User = this.api.user;
+  public readonly history: any;
+  public readonly eve: any;
 
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
@@ -80,6 +84,9 @@ export class SwitchBotPlatform implements DynamicPlatformPlugin {
       request.headers!['Content-Type'] = 'application/json; charset=utf8';
       return request;
     });
+
+    this.history = fakegato(this.api);
+    this.eve = new EveHomeKitTypes(this.api);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
