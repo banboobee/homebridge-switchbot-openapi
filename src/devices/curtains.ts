@@ -87,7 +87,8 @@ export class Curtain {
         this.state.timesOpened = 0;
         this.state.lastReset = reset;
         sensor?.updateCharacteristic(this.platform.eve.Characteristics.TimesOpened, 0);
-        this.platform.log.debug("Reset TimesOpened ${this.accessory.displayName} to 0");
+        this.platform.log.info(`${this.accessory.displayName}: Reset TimesOpened to 0`);
+        this.platform.log.info(`${this.accessory.displayName}: Set lastReset to ${reset}`);
       })
       .onGet(() => {
 	return this.state.lastReset ||
@@ -95,8 +96,8 @@ export class Curtain {
       });
     sensor.getCharacteristic(this.platform.Characteristic.ContactSensorState)
       .on('change', (event: CharacteristicChange) => {
-	this.platform.log.info('ContactSensor state on change:', event);
 	if (event.newValue !== event.oldValue) {
+	  this.platform.log.info('ContactSensor state on change:', event);
 	  const sensor = this.accessory.getService(this.platform.Service.ContactSensor);
           const entry = {
             time: Math.round(new Date().valueOf()/1000),
@@ -107,8 +108,8 @@ export class Curtain {
           if (entry.status) {
             this.state.timesOpened++;
             sensor?.updateCharacteristic(this.platform.eve.Characteristics.TimesOpened, this.state.timesOpened);
-            this.historyService.addEntry(entry);
           }
+          this.historyService.addEntry(entry);
 	}
       });
     this.setMinMax();
@@ -247,7 +248,7 @@ export class Curtain {
   }
 
   async initializeStatus() {
-    await this.setupPersist(this.platform.User.storagePath());
+    await this.setupPersist(this.platform.api.user.storagePath());
     await this.updateHomeKitCharacteristics();
     await this.refreshStatus();
     await this.setupHistory();
@@ -504,8 +505,8 @@ export class Curtain {
       const state = this.state.CurrentPosition > 0 ?
 	    this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
 	    this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED;
-      sensor?.updateCharacteristic(this.platform.Characteristic.ContactSensorState, state);
-      this.platform.log.info('ContactSensor state updated:', state);
+      sensor.updateCharacteristic(this.platform.Characteristic.ContactSensorState, state);
+      this.platform.log.debug('ContactSensor state updated:', state);
     }
   }
 }
