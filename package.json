@@ -42,7 +42,7 @@
     "rxjs": "^7.4.0",
     "@homebridge/plugin-ui-utils": "0.0.19",
     "async-mqtt": "2.6.2",
-    "node-persist": "^2.1.0 <3.0.0",
+    "node-persist": "^3.0.0",
     "@types/node-persist": "^3.1.2",
     "fakegato-history": "^0.6.3",
     "homebridge-lib": "^5.3.2"
