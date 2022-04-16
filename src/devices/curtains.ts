@@ -39,7 +39,7 @@ export class Curtain {
       {dir: path.join(user, 'plugin-persist', 'homebridge-switchbot-openapi'),
        forgiveParseErrors: true
       });
-    let state: currentState = await persist.getItem(device) || this.state;
+    let state: currentState = (await persist.getItem(device)) || this.state;
     this.platform.log.debug('setupPersist:', JSON.stringify(state));
     this.state = new Proxy(state, {
       set: function(target:any, key:PropertyKey, value:any, receiver:any):boolean {
@@ -251,7 +251,9 @@ export class Curtain {
     await this.setupPersist(this.platform.api.user.storagePath());
     await this.updateHomeKitCharacteristics();
     await this.refreshStatus();
-    await this.setupHistory();
+    if (this.platform.config.options?.curtain?.history === true) {
+      await this.setupHistory();
+    }
   }
 
   mqttpublish(topic: string, message: any) {

@@ -66,6 +66,7 @@ export type curtain = {
   set_max?: number;
   set_min?: number;
   set_minStep?: number;
+  history?: boolean;
 };
 
 export type irfan = {
@@ -199,6 +200,6 @@ export type deviceStatus = {
   shaking?: boolean;
   //only available for Smart Fan devices. the fan's swing direciton.
   shakeCenter?: string;
-  //only available for Smart Fan devices. the fan's swing range, 0~120Â°.
+  //only available for Smart Fan devices. the fan's swing range, 0~120‹.
   shakeRange?: string;
 };
